@@ -1,8 +1,10 @@
 package com.example.light
 
+import android.graphics.Typeface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -12,90 +14,154 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
+
+    data class OutageInterval(
+        val start: LocalTime,
+        val end: LocalTime,
+        val rawText: String
+    )
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Знаходимо елементи на екрані
         val container = view.findViewById<LinearLayout>(R.id.cardsContainer)
         val progressBar = view.findViewById<ProgressBar>(R.id.progressBar)
-        val tvHeaderDate = view.findViewById<TextView>(R.id.tvHeaderDate)
 
-        // Отримуємо збережену чергу
         val queue = Prefs.getQueue(requireContext())
 
-        // Якщо черга не обрана - пишемо підказку
         if (queue == null) {
-            tvHeaderDate.text = "Черга не обрана"
-            // Додаємо картку-підказку
-            addCard(container, "Увага", "Перейдіть в налаштування", isOutage = false, isWarning = true)
             progressBar.visibility = View.GONE
+            addSectionTitle(container, "Налаштування")
+            addCard(container, "Увага", "Оберіть чергу в меню", isOutage = false, isWarning = true)
             return
         }
 
-        // Запускаємо завантаження (в іншому потоці)
         lifecycleScope.launch(Dispatchers.IO) {
-
-            // Викликаємо наш парсер
             val data = LightParser.getSchedule(queue)
 
-            // Повертаємося в головний потік, щоб малювати інтерфейс
             withContext(Dispatchers.Main) {
                 progressBar.visibility = View.GONE
-                tvHeaderDate.text = data.date // Ставимо дату (наприклад "Графік на 21.01")
+                container.removeAllViews() // Очищаємо екран
 
-                // Очищаємо контейнер від старих карток (лишаємо тільки заголовок)
-                // childCount > 1 означає, що ми пропускаємо перші елементи (Заголовок дати)
-                // Але надійніше видалити всі View, крім першого (TextView дати)
-                val viewsToRemove = mutableListOf<View>()
-                for (i in 0 until container.childCount) {
-                    val v = container.getChildAt(i)
-                    if (v.id != R.id.tvHeaderDate && v.id != R.id.progressBar) {
-                        viewsToRemove.add(v)
-                    }
-                }
-                viewsToRemove.forEach { container.removeView(it) }
+                // 1. ДОДАЄМО ПОТОЧНУ ДАТУ ЗАМІСТЬ СЛОВА "ГРАФІК"
+                val today = LocalDate.now()
+                // Формат: "Середа, 21 січня"
+                val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("uk", "UA"))
+                val dateText = today.format(formatter).replaceFirstChar { it.uppercase() }
 
-                // Аналізуємо текст і малюємо картки
+                addMainDateHeader(container, dateText)
+
                 if (data.scheduleText.isEmpty() || data.scheduleText.startsWith("Помилка")) {
-                    addCard(container, "Статус", "Даних немає або помилка", isOutage = false, isWarning = true)
+                    addSectionTitle(container, "Статус")
+                    addCard(container, "Помилка", "Не вдалося завантажити дані", false, true)
                 } else {
-                    parseAndCreateCards(container, data.scheduleText)
+                    processAndDisplaySchedule(container, data.scheduleText)
                 }
             }
         }
     }
 
-    // Функція, яка ріже текст "з 00:00 до 04:00, з 08:00 до 12:00" на окремі картки
-    private fun parseAndCreateCards(container: LinearLayout, text: String) {
-        // Очищаємо текст від зайвих слів "з " та переносів рядків
+    private fun processAndDisplaySchedule(container: LinearLayout, text: String) {
+        val now = LocalTime.now()
+
+        // 1. Парсимо інтервали
         val cleanText = text.replace("з ", "").replace("\n", "")
+        val rawIntervals = cleanText.split(",")
+        val outages = mutableListOf<OutageInterval>()
+        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-        // Розбиваємо по комі (бо зазвичай графік йде через кому)
-        val timeIntervals = cleanText.split(",")
-
-        var hasOutages = false
-
-        for (interval in timeIntervals) {
-            val time = interval.trim()
-            if (time.contains("до")) {
-                // Це інтервал відключення!
-                hasOutages = true
-                addCard(container, "Відключення", time, isOutage = true, isWarning = false)
+        for (raw in rawIntervals) {
+            val parts = raw.trim().split(" до ")
+            if (parts.size == 2) {
+                try {
+                    val start = LocalTime.parse(parts[0].trim(), timeFormatter)
+                    val endString = if (parts[1].trim() == "24:00") "23:59" else parts[1].trim()
+                    val end = LocalTime.parse(endString, timeFormatter)
+                    outages.add(OutageInterval(start, end, "${parts[0]} - ${parts[1]}"))
+                } catch (e: Exception) { continue }
             }
         }
 
-        // Якщо ми пройшли весь текст і не знайшли слово "до", значить відключень немає
-        if (!hasOutages) {
-            addCard(container, "Чудово", "Світло є весь день", isOutage = false, isWarning = false)
+        // 2. Блок "Зараз"
+        addSectionTitle(container, "Зараз")
+
+        var isLightsOutNow = false
+        var currentOutage: OutageInterval? = null
+
+        for (outage in outages) {
+            if ((now == outage.start || now.isAfter(outage.start)) && now.isBefore(outage.end)) {
+                isLightsOutNow = true
+                currentOutage = outage
+                break
+            }
+        }
+
+        if (isLightsOutNow && currentOutage != null) {
+            addCard(container, "Триває відключення", currentOutage.rawText, isOutage = true, isWarning = false)
+        } else {
+            addCard(container, "Електроенергія присутня", "Світло є", isOutage = false, isWarning = false)
+        }
+
+        // 3. Блок "Наступні"
+        val futureOutages = outages.filter { it.start.isAfter(now) }
+
+        addSectionTitle(container, "Наступні відключення") // Текст заголовка
+
+        if (futureOutages.isNotEmpty()) {
+            for (outage in futureOutages) {
+                addCard(container, "Заплановано", outage.rawText, isOutage = true, isWarning = false)
+            }
+        } else {
+            addCard(container, "Чудово", "Подальші відключення відсутні", isOutage = false, isWarning = true)
         }
     }
 
-    // Функція, яка бере XML картки і додає її на екран
+    // --- Функції малювання ---
+
+    // ВЕЛИКА ДАТА ЗВЕРХУ (Замість "Графік")
+    private fun addMainDateHeader(container: LinearLayout, text: String) {
+        val textView = TextView(requireContext())
+        textView.text = text
+        textView.textSize = 22f // Великий розмір
+        textView.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+        textView.typeface = Typeface.DEFAULT_BOLD
+        textView.textAlignment = View.TEXT_ALIGNMENT_CENTER
+
+        val params = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        params.setMargins(0, 16, 0, 32) // Відступи
+        textView.layoutParams = params
+
+        container.addView(textView)
+    }
+
+    // Заголовки розділів ("Зараз", "Наступні")
+    private fun addSectionTitle(container: LinearLayout, text: String) {
+        val textView = TextView(requireContext())
+        textView.text = text
+        textView.textSize = 16f
+        textView.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary)) // Сірий колір
+        textView.typeface = Typeface.DEFAULT_BOLD
+
+        val params = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        params.setMargins(12, 24, 0, 12)
+        textView.layoutParams = params
+
+        container.addView(textView)
+    }
+
     private fun addCard(container: LinearLayout, title: String, time: String, isOutage: Boolean, isWarning: Boolean) {
-        // "Надуваємо" (Inflate) XML файл картки
         val cardView = LayoutInflater.from(requireContext()).inflate(R.layout.item_schedule_card, container, false)
 
         val tvTitle = cardView.findViewById<TextView>(R.id.tvCardTitle)
@@ -106,20 +172,19 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         tvTime.text = time
 
         if (isOutage) {
-            tvStatus.text = "Електроенергія відсутня"
+            tvStatus.text = "Світла не буде"
             tvStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_red))
-            // Можна змінити колір часу на червоний для акценту
             tvTime.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_red))
         } else if (isWarning) {
-            tvStatus.text = "Увага"
+            tvStatus.text = "Інформація"
             tvStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
+            tvTime.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
         } else {
             tvStatus.text = "Світло є"
             tvStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_green))
             tvTime.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_green))
         }
 
-        // Додаємо готову картку в список
         container.addView(cardView)
     }
 }

@@ -9,65 +9,55 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Налаштування"
+        android:text="Вибір черги"
         android:textColor="@color/white"
-        android:textSize="32sp"
+        android:textSize="24sp"
         android:textStyle="bold"
         android:layout_marginBottom="32dp"/>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Оберіть вашу чергу:"
-        android:textColor="@color/text_secondary"
-        android:layout_marginBottom="8dp"/>
-
-    <LinearLayout
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="24dp">
+        android:layout_marginBottom="24dp"
+        android:hint="Оберіть чергу"
+        android:textColorHint="@color/text_secondary"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
 
-        <EditText
-            android:id="@+id/etQueue"
+        <AutoCompleteTextView
+            android:id="@+id/dropdownQueue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Введіть номер (напр. 4)"
+            android:inputType="none"
             android:textColor="@color/white"
-            android:textColorHint="@color/text_secondary"
-            android:backgroundTint="@color/primary_accent"
-            android:inputType="number"/>
-    </LinearLayout>
+            android:text="4"
+            />
+    </com.google.android.material.textfield.TextInputLayout>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Оберіть підчергу:"
-        android:textColor="@color/text_secondary"
-        android:layout_marginBottom="8dp"/>
-
-    <LinearLayout
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_marginBottom="32dp"
+        android:hint="Оберіть підчергу"
+        android:textColorHint="@color/text_secondary"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
 
-        <EditText
-            android:id="@+id/etSubQueue"
+        <AutoCompleteTextView
+            android:id="@+id/dropdownSubQueue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Введіть номер (напр. 1 або 2)"
+            android:inputType="none"
             android:textColor="@color/white"
-            android:textColorHint="@color/text_secondary"
-            android:backgroundTint="@color/primary_accent"
-            android:inputType="number"/>
-    </LinearLayout>
+            android:text="1"
+            />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <Button
         android:id="@+id/btnSave"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Зберегти"
+        android:text="Зберегти налаштування"
         android:backgroundTint="@color/primary_accent"
-        android:layout_marginTop="32dp"/>
+        android:textColor="@color/black"
+        style="@style/Widget.Material3.Button"/>
 
 </LinearLayout>
