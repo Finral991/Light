@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/background_dark">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Налаштування"
+        android:textColor="@color/white"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="32dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Оберіть вашу чергу:"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="8dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="24dp">
+
+        <EditText
+            android:id="@+id/etQueue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Введіть номер (напр. 4)"
+            android:textColor="@color/white"
+            android:textColorHint="@color/text_secondary"
+            android:backgroundTint="@color/primary_accent"
+            android:inputType="number"/>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Оберіть підчергу:"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="8dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/etSubQueue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Введіть номер (напр. 1 або 2)"
+            android:textColor="@color/white"
+            android:textColorHint="@color/text_secondary"
+            android:backgroundTint="@color/primary_accent"
+            android:inputType="number"/>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnSave"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Зберегти"
+        android:backgroundTint="@color/primary_accent"
+        android:layout_marginTop="32dp"/>
+
+</LinearLayout>

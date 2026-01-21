@@ -1,42 +1,46 @@
 package com.example.light
-
 import org.jsoup.Jsoup
+import java.util.regex.Pattern
 
 object LightParser {
 
-    // Повертає текст графіку або помилку
-    fun getScheduleForQueue(queue: String): String {
+    data class ParsedData(
+        val scheduleText: String,
+        val date: String // Наприклад "20.01.2026"
+    )
+
+    fun getSchedule(queue: String): ParsedData {
         try {
             val url = "https://hoe.com.ua/page/pogodinni-vidkljuchennja"
-            val doc = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0")
-                .timeout(60000) // 60 секунд тайм-аут
-                .ignoreContentType(true)
-                .ignoreHttpErrors(true)
-                .get()
-
+            val doc = Jsoup.connect(url).timeout(60000).ignoreContentType(true).ignoreHttpErrors(true).get()
             val fullText = doc.body().text()
-            // Розбиваємо текст на шматки, де є слово "черга" або "підчерга"
-            val parts = fullText.split(Regex("(?i)(під)?черга"))
 
+            // 1. Шукаємо дату. Зазвичай це формат XX.XX.XXXX
+            val dateMatcher = Pattern.compile("\\d{2}\\.\\d{2}\\.\\d{4}").matcher(fullText)
+            var foundDate = "Графік"
+            if (dateMatcher.find()) {
+                foundDate = "Графік на ${dateMatcher.group()}"
+            }
+
+            // 2. Шукаємо чергу
+            val parts = fullText.split(Regex("(?i)(під)?черга"))
             val sb = StringBuilder()
 
             for (part in parts) {
                 val line = part.trim()
-                // Шукаємо точний збіг. Наприклад, якщо queue="4.1", шукаємо "4.1"
-                // Використовуємо startsWith, щоб знайти "4.1." або "4.1 "
                 if (line.startsWith(queue)) {
-                    // Беремо все до крапки з комою
                     val info = line.substringBefore(";")
-                    sb.append("• ").append(info).append("\n\n")
+                    // Прибираємо зайві "4.1 - " з тексту
+                    val cleanInfo = info.replace("$queue", "").replace("-", "").trim()
+                    sb.append(cleanInfo).append("\n")
                 }
             }
 
-            return if (sb.isNotEmpty()) sb.toString() else ""
+            val result = if (sb.isNotEmpty()) sb.toString() else ""
+            return ParsedData(result, foundDate)
 
         } catch (e: Exception) {
-            e.printStackTrace()
-            return "Помилка: ${e.message}"
+            return ParsedData("Помилка", "")
         }
     }
 }
