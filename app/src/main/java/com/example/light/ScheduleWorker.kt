@@ -7,16 +7,16 @@ import androidx.work.WorkerParameters
 class ScheduleWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        // Отримуємо збережену чергу
         val queue = Prefs.getQueue(applicationContext) ?: return Result.success()
-
-        // ВИПРАВЛЕННЯ: Використовуємо нову функцію getSchedule
         val data = LightParser.getSchedule(queue)
 
-        // Перевіряємо, чи отримали ми нормальні дані (не помилку і не пустий текст)
-        if (data.scheduleText.isNotEmpty() && !data.scheduleText.startsWith("Помилка")) {
-            // Зберігаємо тільки текст графіку (дату поки що в Prefs не зберігаємо, але можна додати пізніше)
-            Prefs.saveSchedule(applicationContext, data.scheduleText)
+        // Зберігаємо, якщо є хоч якісь дані (на сьогодні або на завтра)
+        if (data.todaySchedule.isNotEmpty() || data.tomorrowSchedule.isNotEmpty()) {
+            // Тут ми можемо зберегти об'єднаний текст або додумати логіку збереження
+            // Поки що для простоти збережемо графік на сьогодні, щоб віджет/сповіщення працювали
+            if (data.todaySchedule.isNotEmpty()) {
+                Prefs.saveSchedule(applicationContext, data.todaySchedule)
+            }
         }
 
         return Result.success()

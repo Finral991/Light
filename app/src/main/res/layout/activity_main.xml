@@ -40,8 +40,11 @@
         android:layout_height="wrap_content"
         android:background="@color/surface_dark"
         app:menu="@menu/bottom_nav_menu"
-        app:itemIconTint="@color/primary_accent"
-        app:itemTextColor="@color/text_primary"
+
+        app:labelVisibilityMode="unlabeled"
+        app:itemIconSize="32dp"
+        app:itemIconTint="@color/nav_icon_color"
+
         app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
